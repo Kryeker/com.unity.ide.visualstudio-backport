@@ -161,8 +161,10 @@ namespace Microsoft.Unity.VisualStudio.Editor
 					return !ProjectGenerationFlag.HasFlag(ProjectGenerationFlag.Local);
 				case PackageSource.Git:
 					return !ProjectGenerationFlag.HasFlag(ProjectGenerationFlag.Git);
+				#if UNITY_2019_4_OR_NEWER
 				case PackageSource.LocalTarball:
 					return !ProjectGenerationFlag.HasFlag(ProjectGenerationFlag.LocalTarBall);
+				#endif
 			}
 
 			return false;
