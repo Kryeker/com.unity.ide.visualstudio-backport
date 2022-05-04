@@ -3,7 +3,7 @@
 `com.unity.ide.visualstudio` supports working with Unity 2019.4.21f1 and later. We backported it for earlier versions of Unity.
 
 ## Works with
-- Unity 2019.4.15f1
+- Unity 2019.2.21f1
 
 ## Install
 
