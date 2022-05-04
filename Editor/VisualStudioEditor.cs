@@ -64,7 +64,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
 		internal static bool IsEnabled => CodeEditor.CurrentEditor is VisualStudioEditor && UnityInstallation.IsMainUnityEditorProcess;
 
 		// this one seems legacy and not used anymore
-		// keeping it for now given it is public, so we need a major bump to remove it 
+		// keeping it for now given it is public, so we need a major bump to remove it
 		public void CreateIfDoesntExist()
 		{
 			if (!_generator.HasSolutionBeenGenerated())
@@ -123,7 +123,9 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			SettingsButton(ProjectGenerationFlag.Registry, "Registry packages", "");
 			SettingsButton(ProjectGenerationFlag.Git, "Git packages", "");
 			SettingsButton(ProjectGenerationFlag.BuiltIn, "Built-in packages", "");
+#if UNITY_2019_3_OR_NEWER
 			SettingsButton(ProjectGenerationFlag.LocalTarBall, "Local tarball", "");
+#endif
 			SettingsButton(ProjectGenerationFlag.Unknown, "Packages from unknown sources", "");
 			SettingsButton(ProjectGenerationFlag.PlayerAssemblies, "Player projects", "For each player project generate an additional csproj with the name 'project-player.csproj'");
 			RegenerateProjectFiles();
@@ -242,8 +244,10 @@ namespace Microsoft.Unity.VisualStudio.Editor
 					return "Git packages";
 				case ProjectGenerationFlag.Local:
 					return "Local packages";
+#if UNITY_2019_3_OR_NEWER
 				case ProjectGenerationFlag.LocalTarBall:
 					return "Local tarball";
+#endif
 				case ProjectGenerationFlag.PlayerAssemblies:
 					return "Player projects";
 				case ProjectGenerationFlag.Registry:

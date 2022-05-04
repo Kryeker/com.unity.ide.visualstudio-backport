@@ -18,6 +18,8 @@ namespace Microsoft.Unity.VisualStudio.Editor
 		BuiltIn = 16,
 		Unknown = 32,
 		PlayerAssemblies = 64,
+#if UNITY_2019_3_OR_NEWER
 		LocalTarBall = 128,
+#endif
 	}
 }
