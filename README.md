@@ -1,4 +1,5 @@
 # com.unity.ide.visualstudio-backport
+![image](https://user-images.githubusercontent.com/2897430/166826494-2c838a44-93ec-44fc-8d2d-046adeddb5b3.png)
 
 `com.unity.ide.visualstudio` supports working with Unity 2019.4.21f1 and later. We backported it for earlier versions of Unity.
 
