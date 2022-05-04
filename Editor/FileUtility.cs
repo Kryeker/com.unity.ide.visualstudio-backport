@@ -39,7 +39,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			return path.Replace(string.Concat(WinSeparator, WinSeparator), WinSeparator.ToString());
 		}
 
-		public static string NormalizeWindowsToUnix(string path)
+		public static string NormalizeWindowsToUnix(this string path)
 		{
 			if (string.IsNullOrEmpty(path))
 				return path;
@@ -56,10 +56,10 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			return relative == Path.GetFileName(relative);
 		}
 
-		public static string MakeAbsolutePath(this string path, string projectDirectory)
+		public static string MakeAbsolutePath(this string path)
 		{
 			if (string.IsNullOrEmpty(path)) { return string.Empty; }
-			return Path.IsPathRooted(path) ? path : Path.Combine(projectDirectory, path);
+			return Path.IsPathRooted(path) ? path : Path.GetFullPath(path);
 		}
 		
 		// returns null if outside of the project scope
