@@ -8,7 +8,7 @@
 
 ## Install
 
-https://github.com/Kryeker/com.unity.ide.visualstudio-backport.git
+https://github.com/Cysharp/com.unity.ide.visualstudio-backport.git?path=com.unity.ide.visualstudio
 
 ## License
 The original `com.unity.ide.visualstudio` package is licensed under the MIT license.

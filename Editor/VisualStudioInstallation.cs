@@ -46,7 +46,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			// VisualStudio 2019
 			new VersionPair(16,8, /* => */ 9,0),
 			new VersionPair(16,0, /* => */ 8,0),
-			
+
 			// VisualStudio 2017
 			new VersionPair(15,7, /* => */ 7,3),
 			new VersionPair(15,5, /* => */ 7,2),
@@ -203,8 +203,12 @@ namespace Microsoft.Unity.VisualStudio.Editor
 		}
 
 		public CodeEditor.Installation ToCodeEditorInstallation()
-		{
-			return new CodeEditor.Installation() { Name = Name, Path = Path + " " /* HACK(Cysharp): Before 2019.4.21f1 */ };
+        {
+            string path = Path;
+#if !UNITY_2019_4_39
+             path = Path + " ";/* HACK(Cysharp): Before 2019.4.21f1 */
+#endif
+			return new CodeEditor.Installation() { Name = Name, Path = path  };
 		}
 	}
 }

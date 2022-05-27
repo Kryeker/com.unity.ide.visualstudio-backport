@@ -199,10 +199,12 @@ namespace Microsoft.Unity.VisualStudio.Editor
 		private static void CheckCurrentEditorInstallation()
 		{
 			var editorPath = CodeEditor.CurrentEditorInstallation;
-			// HACK(Cysharp): The parameter `path` ends with ' '. We should trim the space.
-			editorPath = editorPath.TrimEnd();
-			try
-			{
+#if  !UNITY_2019_4_39
+            // HACK(Cysharp): The parameter `path` ends with ' '. We should trim the space.
+            editorPath = editorPath.TrimEnd();
+#endif
+            try
+            {
 				if (Discovery.TryDiscoverInstallation(editorPath, out _))
 					return;
 			}
