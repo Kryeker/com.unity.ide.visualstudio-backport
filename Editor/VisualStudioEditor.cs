@@ -177,7 +177,6 @@ namespace Microsoft.Unity.VisualStudio.Editor
 
 		public void SyncAll()
 		{
-			AssetDatabase.Refresh();
 			_generator.Sync();
 		}
 
@@ -327,7 +326,9 @@ namespace Microsoft.Unity.VisualStudio.Editor
 					CreateNoWindow = true,
 					UseShellExecute = false,
 					RedirectStandardOutput = true,
+					StandardOutputEncoding = System.Text.Encoding.Unicode,
 					RedirectStandardError = true,
+					StandardErrorEncoding = System.Text.Encoding.Unicode,
 				}
 			};
 			var result = process.Start();
