@@ -28,7 +28,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			internal ProjectGenerationFlag Source;
 		}
 
-		private Dictionary<ProjectGenerationFlag, bool> _showAdvancedFilters = new();
+		private Dictionary<ProjectGenerationFlag, bool> _showAdvancedFilters = new Dictionary<ProjectGenerationFlag, bool>();
 		private ProjectGenerationFlag _cachedFlag;
 		private Dictionary<string, bool> _packageFilter;
 		private Dictionary<string, bool> _assemblyFilter;
@@ -291,9 +291,9 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			EditorGUI.BeginDisabledGroup(_packageFilter.Count == 0 && _assemblyFilter.Count == 0);
 			if (GUI.Button(rect, "Reset filters"))
 			{
-				_packageFilter = new();
-				_assemblyFilter = new();
-				_showAdvancedFilters = new();
+				_packageFilter = new Dictionary<string, bool>();
+				_assemblyFilter = new Dictionary<string, bool>();
+				_showAdvancedFilters = new Dictionary<ProjectGenerationFlag, bool>();
 				WriteBackFilters(installation);
 			}
 			EditorGUI.EndDisabledGroup();

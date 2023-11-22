@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEditor.Compilation;
+using PackageInfo = UnityEditor.PackageManager.PackageInfo;
 
 namespace Microsoft.Unity.VisualStudio.Editor
 {
@@ -11,7 +12,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
 	{
 		IList<string> ExcludedPackages { get; set; }
 		IList<string> ExcludedAssemblies { get; set; }
-		IEnumerable<UnityEditor.PackageManager.PackageInfo> PackagesFilteredByProjectGenerationFlags { get; }
+		IEnumerable<PackageInfo> PackagesFilteredByProjectGenerationFlags { get; }
 
 	}
 
@@ -45,14 +46,30 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			}
 		}
 
-		public IEnumerable<UnityEditor.PackageManager.PackageInfo> PackagesFilteredByProjectGenerationFlags =>
-			UnityEditor.PackageManager.PackageInfo.GetAllRegisteredPackages()
+		public IEnumerable<PackageInfo> PackagesFilteredByProjectGenerationFlags =>
+			GetAllPackages()
 			.Where(p => m_AssemblyNameProvider.IsInternalizedPackage(p) == false);
+
+#if UNITY_2021_1_OR_NEWER
+		private static IEnumerable<PackageInfo> GetAllRegisteredPackages() => PackageInfo.GetAllRegisteredPackages();
+#else
+		private static Func<PackageInfo> _getAllPackages;
+		private static IEnumerable<PackageInfo> GetAllPackages()
+		{
+			if (_getAllPackages == null)
+			{
+				var m = typeof(PackageInfo).GetMethod("GetAll", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.FlattenHierarchy);
+				_getAllPackages = Delegate.CreateDelegate(Func<PackageInfo>, m);
+			}
+
+			return _getAllPackages();
+		}
+#endif
 
 		private static List<string> GetEditorPrefsStringList(string key)
 		{
 			return EditorPrefs.GetString(key, null)?
-				.Split(";", StringSplitOptions.RemoveEmptyEntries)
+				.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
 				.ToList()
 				?? new List<string>();
 		}
