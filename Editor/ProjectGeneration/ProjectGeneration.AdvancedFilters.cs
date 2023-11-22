@@ -53,13 +53,13 @@ namespace Microsoft.Unity.VisualStudio.Editor
 #if UNITY_2021_1_OR_NEWER
 		private static IEnumerable<PackageInfo> GetAllPackages() => PackageInfo.GetAllRegisteredPackages();
 #else
-		private static Func<PackageInfo> _getAllPackages;
+		private static Func<PackageInfo[]> _getAllPackages;
 		private static IEnumerable<PackageInfo> GetAllPackages()
 		{
 			if (_getAllPackages == null)
 			{
 				var m = typeof(PackageInfo).GetMethod("GetAll", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.FlattenHierarchy);
-				_getAllPackages = Delegate.CreateDelegate(Func<PackageInfo>, m);
+				_getAllPackages = (Func<PackageInfo[]>)Delegate.CreateDelegate(typeof(Func<PackageInfo[]>), m);
 			}
 
 			return _getAllPackages();

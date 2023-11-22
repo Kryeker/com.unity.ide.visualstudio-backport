@@ -111,7 +111,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
 					return ProjectGenerationFlag.None;
 
 				default:
-					return Enum.Parse<ProjectGenerationFlag>(source.ToString());
+					return (ProjectGenerationFlag)Enum.Parse(typeof(ProjectGenerationFlag), source.ToString());
 			}
 		}
 
