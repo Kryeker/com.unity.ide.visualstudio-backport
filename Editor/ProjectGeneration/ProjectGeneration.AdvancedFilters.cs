@@ -51,7 +51,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			.Where(p => m_AssemblyNameProvider.IsInternalizedPackage(p) == false);
 
 #if UNITY_2021_1_OR_NEWER
-		private static IEnumerable<PackageInfo> GetAllRegisteredPackages() => PackageInfo.GetAllRegisteredPackages();
+		private static IEnumerable<PackageInfo> GetAllPackages() => PackageInfo.GetAllRegisteredPackages();
 #else
 		private static Func<PackageInfo> _getAllPackages;
 		private static IEnumerable<PackageInfo> GetAllPackages()
