@@ -24,7 +24,7 @@ Here are the easiest ways to install the package, choose either:
 ### A) Using package manager
 Open Package Manager, select "Add package from git URL..." and enter
 ```
-https://github.com/krisrok/com.unity.ide.visualstudio.git#2.0.22-advanced_package_filter
+https://github.com/krisrok/com.unity.ide.visualstudio.git#2.0.22-apf
 ```
 
 ### B) Edit manifest
@@ -39,10 +39,13 @@ In the dependencies find the line
 and replace it with
 
 ```
-"com.unity.ide.visualstudio": "https://github.com/krisrok/com.unity.ide.visualstudio.git#2.0.22-advanced_package_filter",
+"com.unity.ide.visualstudio": "https://github.com/krisrok/com.unity.ide.visualstudio.git#2.0.22-apf",
 ```
 
-Also works for all versions 2.0.16 and upwards (but _not_ 2.0.19).
+## Versioning
+Tags and UPM package versions will be postfixed `-apf` from 2.0.22 on.
+
+Adaptions for previous versions are also available, see [tags](https://github.com/krisrok/com.unity.ide.visualstudio/tags).
 
 ## Usage
 
