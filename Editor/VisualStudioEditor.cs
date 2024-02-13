@@ -19,7 +19,7 @@ using Unity.CodeEditor;
 namespace Microsoft.Unity.VisualStudio.Editor
 {
 	[InitializeOnLoad]
-	public class VisualStudioEditor : IExternalCodeEditor
+	public partial class VisualStudioEditor : IExternalCodeEditor
 	{
 		CodeEditor.Installation[] IExternalCodeEditor.Installations => _discoverInstallations
 			.Result
@@ -134,6 +134,9 @@ namespace Microsoft.Unity.VisualStudio.Editor
 
 			EditorGUILayout.LabelField("Generate .csproj files for:");
 			EditorGUI.indentLevel++;
+
+			EnsureAdvancedFiltersCache(installation);
+
 			SettingsButton(ProjectGenerationFlag.Embedded, "Embedded packages", "", installation);
 			SettingsButton(ProjectGenerationFlag.Local, "Local packages", "", installation);
 			SettingsButton(ProjectGenerationFlag.Registry, "Registry packages", "", installation);
@@ -144,7 +147,17 @@ namespace Microsoft.Unity.VisualStudio.Editor
 #endif
             SettingsButton(ProjectGenerationFlag.Unknown, "Packages from unknown sources", "", installation);
 			SettingsButton(ProjectGenerationFlag.PlayerAssemblies, "Player projects", "For each player project generate an additional csproj with the name 'project-player.csproj'", installation);
+
+			EditorGUILayout.Space();
+			DrawAssetAssemblies(installation);
+			EditorGUILayout.Space();
+
+			EditorGUILayout.BeginHorizontal();
 			RegenerateProjectFiles(installation);
+			DrawResetFiltersButton(installation);
+			GUILayout.FlexibleSpace();
+			EditorGUILayout.EndHorizontal();
+
 			EditorGUI.indentLevel--;
 		}
 
@@ -158,14 +171,42 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			}
 		}
 
-		private static void SettingsButton(ProjectGenerationFlag preference, string guiMessage, string toolTip, IVisualStudioInstallation installation)
+		private void SettingsButton(ProjectGenerationFlag preference, string guiMessage, string toolTip, IVisualStudioInstallation installation)
 		{
 			var generator = installation.ProjectGenerator;
 			var prevValue = generator.AssemblyNameProvider.ProjectGenerationFlag.HasFlag(preference);
 
-			var newValue = EditorGUILayout.Toggle(new GUIContent(guiMessage, toolTip), prevValue);
+			var packageCount = _packageAssemblyHierarchyByGenerationFlag.TryGetValue(preference, out var packages) ? packages?.Count ?? 0 : 0;
+			var assemblyCount = packages?.Sum(p => p.Assemblies.Count) ?? 0;
+			var includedAssemblyCount = assemblyCount - packages?.Sum(p =>
+				installation.ProjectGenerator.ExcludedPackages.Contains(p.Id) ?
+					p.Assemblies.Count :
+					p.Assemblies.Count(a => installation.ProjectGenerator.ExcludedAssemblies.Contains(a.Id))) ?? 0;
+
+			EditorGUILayout.BeginHorizontal();
+
+			var newValue = DrawToggle(new GUIContent(guiMessage, toolTip), prevValue, showMixedValue: assemblyCount > includedAssemblyCount, GUILayout.ExpandWidth(false));
 			if (newValue != prevValue)
 				generator.AssemblyNameProvider.ToggleProjectGeneration(preference);
+
+			bool isFoldoutExpanded = false;
+			if (newValue)
+			{
+				isFoldoutExpanded = DrawAdvancedFiltersFoldout(preference, newValue, installation, packages, assemblyCount, includedAssemblyCount);
+			}
+			else
+			{
+				// draw space to avoid jumping toggles
+				EditorGUILayout.Space();
+			}
+			EditorGUILayout.EndHorizontal();
+
+			if (isFoldoutExpanded == false)
+				return;
+
+			EditorGUI.indentLevel++;
+			DrawAdvancedFilters(preference, installation);
+			EditorGUI.indentLevel--;
 		}
 
 		public void SyncIfNeeded(string[] addedFiles, string[] deletedFiles, string[] movedFiles, string[] movedFromFiles, string[] importedFiles)

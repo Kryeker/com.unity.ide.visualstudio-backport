@@ -26,7 +26,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
 		CSharp
 	}
 
-	public interface IGenerator
+	public partial interface IGenerator
 	{
 		bool SyncIfNeeded(IEnumerable<string> affectedFiles, IEnumerable<string> reimportedFiles);
 		void Sync();
@@ -37,7 +37,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
 		IAssemblyNameProvider AssemblyNameProvider { get; }
 	}
 
-	public class ProjectGeneration : IGenerator
+	public partial class ProjectGeneration : IGenerator
 	{
 		// do not remove because of the Validation API, used in LegacyStyleProjectGeneration
 		public static readonly string MSBuildNamespaceUri = "http://schemas.microsoft.com/developer/msbuild/2003";
@@ -215,7 +215,12 @@ namespace Microsoft.Unity.VisualStudio.Editor
 				return false;
 			}
 
-			return IsSupportedFile(file);
+			if (IsSupportedFile(file) == false)
+			{
+				return false;
+			}
+
+			return ShouldFileBePartOfSolutionDependingOnFilters(file);
 		}
 
 		private static string GetExtensionWithoutDot(string path)
