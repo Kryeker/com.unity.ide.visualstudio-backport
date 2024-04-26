@@ -208,7 +208,20 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			DrawAssemblyCountInfo(assemblyCount, includedAssemblyCount);
 
 			if (result.isEnabled != isEnabled)
+			{
 				generator.AssemblyNameProvider.ToggleProjectGeneration(preference);
+				foreach (var package in packages)
+				{
+					_packageFilter[package.Id] = result.isEnabled;
+
+					foreach(var assembly in package.Assemblies)
+					{
+						_assemblyFilter[assembly.Id] = result.isEnabled;
+					}
+				}
+
+				WriteBackFilters(installation);
+			}
 
 			_packageFiltersExpanded[preference] = result.isExpanded;
 

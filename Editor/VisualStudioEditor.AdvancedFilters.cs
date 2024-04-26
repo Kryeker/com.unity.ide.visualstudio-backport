@@ -169,8 +169,15 @@ namespace Microsoft.Unity.VisualStudio.Editor
 				if (result.isEnabled != isEnabled)
 				{
 					_packageFilter[package.Id] = result.isEnabled;
+
+					foreach(var assembly in package.Assemblies)
+					{
+						_assemblyFilter[assembly.Id] = result.isEnabled;
+					}
+
 					isDirty = true;
 				}
+
 				_assemblyFiltersExpanded[package.Id] = result.isExpanded;
 
 				EditorGUILayout.EndHorizontal();
