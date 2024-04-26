@@ -6,6 +6,8 @@ using UnityEditor;
 using UnityEditor.PackageManager;
 using UnityEngine;
 using Unity.CodeEditor;
+using UnityEditor.Experimental.GraphView;
+using System.CodeDom;
 
 // Advanced filters "addons"
 namespace Microsoft.Unity.VisualStudio.Editor
@@ -233,7 +235,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
 		{
 			var rect = GUILayoutUtility.GetLastRect();
 			var guiContent = new GUIContent($"{FormatAssemblyCount(includedAssemblyCount, assemblyCount)}");
-			rect.xMin += 310;
+			rect.xMin += _togglePosition;
 			EditorGUI.BeginDisabledGroup(includedAssemblyCount == 0);
 			EditorGUI.LabelField(rect, guiContent, EditorStyles.miniLabel);
 			EditorGUI.EndDisabledGroup();
@@ -276,8 +278,14 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			public bool isExpanded;
 			public bool showMixedValue;
 			public bool drawLabelAsDisabled;
-			internal bool disableToggle;
+			public bool disableToggle;
 		}
+
+		// Static value to align all toggles
+		private static float _togglePosition = 250;
+
+		private const float _toggleSpacing = 10;
+		private const float _indentWidth = 15;
 
 		private static FoldoutToggleOptions DrawFoldoutToggle(FoldoutToggleOptions ftOptions, params GUILayoutOption[] options)
 		{
@@ -289,30 +297,32 @@ namespace Microsoft.Unity.VisualStudio.Editor
 
 			var drawLabelAsDisabled = ftOptions.drawLabelAsDisabled || ftOptions.isEnabled == false;
 
-			Rect labelRect = new Rect();
 			if (ftOptions.drawFoldout)
 			{
 				ftOptions.isExpanded = EditorGUILayout.Foldout(ftOptions.isExpanded, GUIContent.none, toggleOnLabelClick: false);
-				labelRect = GUILayoutUtility.GetLastRect();
-				labelRect.xMin += 12;
-
-				if(drawLabelAsDisabled)
-					GUI.color = disabledColor;
-
-				EditorGUI.LabelField(labelRect, ftOptions.label);
 			}
 			else
 			{
-				if (drawLabelAsDisabled)
+				// Replacement for if we're not drawing a foldout (but we still need the space reserved)
+				EditorGUILayout.GetControlRect();
+			}
+			var labelRect = GUILayoutUtility.GetLastRect();
+
+			if (drawLabelAsDisabled)
 					GUI.color = disabledColor;
 
-				EditorGUILayout.LabelField(ftOptions.label);
-			}
+			GUIStyle labelStyle = EditorStyles.label;
+			labelStyle.wordWrap = false;
+			var labelSize = labelStyle.CalcSize(ftOptions.label);
+			labelRect.xMin += _indentWidth;
+			labelRect.xMax = labelRect.xMin + labelSize.x + EditorGUI.indentLevel * _indentWidth;
+			EditorGUI.LabelField(labelRect, ftOptions.label, labelStyle);
+
 			GUI.color = previousColor;
 
 			var foldoutRect = GUILayoutUtility.GetLastRect();
 			var toggleRect = foldoutRect;
-			toggleRect.xMin = 300;
+			toggleRect.xMin = _togglePosition = Mathf.Max(_togglePosition, labelRect.xMax + _toggleSpacing);
 			var savedIndentLevel = EditorGUI.indentLevel;
 			EditorGUI.indentLevel = 0;
 
