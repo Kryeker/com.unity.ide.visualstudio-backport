@@ -195,12 +195,12 @@ namespace Microsoft.Unity.VisualStudio.Editor
 
 				var includedAssemblyCountAfter = package.Assemblies.Count(a => installation.ProjectGenerator.ExcludedAssemblies.Contains(a.Id) == false);
 
-					if(includedAssemblyCountAfter > includedAssemblyCount)
-					{
-						_packageFilter[package.Id] = true;
-						isDirty = true;
-					}
+				if(includedAssemblyCountAfter > includedAssemblyCount)
+				{
+					_packageFilter[package.Id] = true;
+					isDirty = true;
 				}
+			}
 
 			if (isDirty)
 			{
@@ -417,7 +417,13 @@ namespace Microsoft.Unity.VisualStudio.Editor
 		private void DrawSearchBox()
 		{
 			_searchField ??= new SearchField();
+			EditorGUILayout.BeginHorizontal();
 			_searchText = _searchField.OnGUI(EditorGUILayout.GetControlRect(GUILayout.Width(200)), _searchText);
+			if (_isSearching)
+			{
+				EditorGUILayout.LabelField("Note: All entries are auto-expanded during search. Clear search to return to normal operation.", EditorStyles.miniLabel);
+			}
+			EditorGUILayout.EndHorizontal();
 		}
 	}
 }
