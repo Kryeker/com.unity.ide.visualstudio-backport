@@ -93,7 +93,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
 				var containingAssemblyPath = CompilationPipeline.GetAssemblyDefinitionFilePathFromScriptPath(file);
 				if (containingAssemblyPath != null)
 				{
-					// ... or if they belong to a excluded .asmdef
+					// ... or if they belong to an excluded .asmdef
 					var containingAssemblyFilename = Path.GetFileName(containingAssemblyPath);
 					if (m_ExcludedAssemblies.Contains(containingAssemblyFilename))
 						return false;
