@@ -135,6 +135,8 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			EditorGUILayout.LabelField("Generate .csproj files for:");
 			DrawSearchBox();
 
+			_scrollPos = EditorGUILayout.BeginScrollView(_scrollPos);
+
 			EditorGUI.indentLevel++;
 
 			EnsureAdvancedFiltersCache(installation);
@@ -151,6 +153,8 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			EditorGUILayout.Space();
 			DrawAssetAssemblies(installation);
 			EditorGUILayout.Space();
+
+			EditorGUILayout.EndScrollView();
 
 			EditorGUILayout.BeginHorizontal();
 			RegenerateProjectFiles(installation);

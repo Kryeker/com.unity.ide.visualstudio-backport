@@ -411,6 +411,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
 
 		private static string _searchText = "";
 		private SearchField _searchField;
+		private Vector2 _scrollPos;
 
 		private static bool _isSearching => string.IsNullOrWhiteSpace(_searchText) == false;
 
