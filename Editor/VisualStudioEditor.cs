@@ -133,6 +133,8 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			GUILayout.EndHorizontal();
 
 			EditorGUILayout.LabelField("Generate .csproj files for:");
+			DrawSearchBox();
+
 			EditorGUI.indentLevel++;
 
 			EnsureAdvancedFiltersCache(installation);
@@ -200,9 +202,10 @@ namespace Microsoft.Unity.VisualStudio.Editor
 				label = new GUIContent(guiMessage, toolTip),
 				isEnabled = isEnabled,
 				drawFoldout = true,
-				isExpanded = showAdvancedFilters,
+				isExpanded = showAdvancedFilters || _isSearching,
 				showMixedValue = assemblyCount > includedAssemblyCount,
-				drawLabelAsDisabled = includedAssemblyCount == 0
+				drawLabelAsDisabled = includedAssemblyCount == 0,
+				disableSearch = true
 			});
 
 			DrawAssemblyCountInfo(assemblyCount, includedAssemblyCount);
@@ -223,7 +226,10 @@ namespace Microsoft.Unity.VisualStudio.Editor
 				WriteBackFilters(installation);
 			}
 
-			_packageFiltersExpanded[preference] = result.isExpanded;
+			if (_isSearching == false)
+			{
+				_packageFiltersExpanded[preference] = result.isExpanded;
+			}
 
 			if (result.isExpanded == false)
 				return;

@@ -6,6 +6,7 @@ using UnityEditor;
 using UnityEditor.PackageManager;
 using UnityEngine;
 using Unity.CodeEditor;
+using UnityEditor.IMGUI.Controls;
 
 // Advanced filters "addons"
 namespace Microsoft.Unity.VisualStudio.Editor
@@ -161,7 +162,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
 					label = new GUIContent(package.DisplayName),
 					isEnabled = isEnabled,
 					drawFoldout = assemblyCount > 0,
-					isExpanded = showAssemblies,
+					isExpanded = showAssemblies || _isSearching,
 					showMixedValue = assemblyCount > includedAssemblyCount,
 					drawLabelAsDisabled = isParentEnabled == false || includedAssemblyCount == 0
 				});
@@ -178,7 +179,10 @@ namespace Microsoft.Unity.VisualStudio.Editor
 					isDirty = true;
 				}
 
-				_assemblyFiltersExpanded[package.Id] = result.isExpanded;
+				if (_isSearching == false)
+				{
+					_assemblyFiltersExpanded[package.Id] = result.isExpanded;
+				}
 
 				EditorGUILayout.EndHorizontal();
 
@@ -212,7 +216,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			{
 				isEnabled = true,
 				drawFoldout = true,
-				isExpanded = isFoldoutExpanded,
+				isExpanded = isFoldoutExpanded || _isSearching,
 				label = new GUIContent("Assemblies from Assets"),
 				drawLabelAsDisabled = includedAssemblyCount == 0,
 				disableToggle = true,
@@ -221,7 +225,10 @@ namespace Microsoft.Unity.VisualStudio.Editor
 
 			DrawAssemblyCountInfo(assemblyCount, includedAssemblyCount);
 
-			_packageFiltersExpanded[ProjectGenerationFlag.None] = result.isExpanded;
+			if (_isSearching == false)
+			{
+				_packageFiltersExpanded[ProjectGenerationFlag.None] = result.isExpanded;
+			}
 
 			if (result.isExpanded)
 			{
@@ -284,6 +291,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			public bool showMixedValue;
 			public bool drawLabelAsDisabled;
 			public bool disableToggle;
+			internal bool disableSearch;
 		}
 
 		// Static value to align all toggles
@@ -300,34 +308,42 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			var disabledColor = previousColor;
 			disabledColor.a *= 0.5f;
 
+			GUIStyle labelStyle = new GUIStyle(EditorStyles.label);
+
+			var rowRect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight, EditorStyles.foldout);
+
+			if (ftOptions.disableSearch == false && _isSearching && ftOptions.label.text.Contains(_searchText.Trim(), StringComparison.InvariantCultureIgnoreCase))
+			{
+				EditorGUI.DrawRect(rowRect, new Color(0.17f, 0.36f, 0.53f, 1f));
+
+				labelStyle.normal.textColor = Color.white;
+			}
+
 			var drawLabelAsDisabled = ftOptions.drawLabelAsDisabled || ftOptions.isEnabled == false;
 
-			Rect labelRect;
+			Rect labelRect = rowRect;
 			if (ftOptions.drawFoldout)
 			{
-				ftOptions.isExpanded = EditorGUILayout.Foldout(ftOptions.isExpanded, GUIContent.none, toggleOnLabelClick: false);
-				labelRect = GUILayoutUtility.GetLastRect();
+				ftOptions.isExpanded = EditorGUI.Foldout(rowRect, ftOptions.isExpanded, GUIContent.none, toggleOnLabelClick: false);
 				labelRect.xMin += _indentWidth;
 			}
 			else
 			{
-				// Replacement for if we're not drawing a foldout (but we still need the space reserved)
-				labelRect = EditorGUILayout.GetControlRect();
 				labelRect.xMin += _indentWidth * 0.5f;
 			}
 
 			if (drawLabelAsDisabled)
-					GUI.color = disabledColor;
+				GUI.color = disabledColor;
 
-			GUIStyle labelStyle = EditorStyles.label;
 			labelStyle.wordWrap = false;
 			var labelSize = labelStyle.CalcSize(ftOptions.label);
 			labelRect.xMax = labelRect.xMin + labelSize.x + EditorGUI.indentLevel * _indentWidth;
+
 			EditorGUI.LabelField(labelRect, ftOptions.label, labelStyle);
 
 			GUI.color = previousColor;
 
-			var foldoutRect = GUILayoutUtility.GetLastRect();
+			var foldoutRect = rowRect;
 			var toggleRect = foldoutRect;
 			toggleRect.xMin = _togglePosition = Mathf.Max(_togglePosition, labelRect.xMax + _toggleSpacing);
 			var savedIndentLevel = EditorGUI.indentLevel;
@@ -353,14 +369,8 @@ namespace Microsoft.Unity.VisualStudio.Editor
 					ftOptions.isExpanded = !ftOptions.isExpanded;
 				}
 			}
-
 			EditorGUI.indentLevel = savedIndentLevel;
 
-			//EditorGUILayout.Toggle(GUIContent.none, isEnabled, options);
-			//EditorGUILayout.BeginHorizontal();
-			//EditorGUILayout.LabelField(label, GUILayout.Width(260 - EditorGUI.indentLevel * 15));
-			//EditorGUILayout.Toggle(wasEnabled, GUILayout.Width(32), GUILayout.ExpandWidth(true));
-			//EditorGUILayout.EndHorizontal();
 			EditorGUILayout.EndHorizontal();
 
 			if (foldoutRect.Contains(Event.current.mousePosition))
@@ -387,8 +397,20 @@ namespace Microsoft.Unity.VisualStudio.Editor
 				_assemblyFilter = new Dictionary<string, bool>();
 				_packageFiltersExpanded = new Dictionary<ProjectGenerationFlag, bool>();
 				WriteBackFilters(installation);
+				InitializeAdvancedFiltersCache(installation);
 			}
 			EditorGUI.EndDisabledGroup();
+		}
+
+		private static string _searchText = "";
+		private SearchField _searchField;
+
+		private static bool _isSearching => string.IsNullOrWhiteSpace(_searchText) == false;
+
+		private void DrawSearchBox()
+		{
+			_searchField ??= new SearchField();
+			_searchText = _searchField.OnGUI(EditorGUILayout.GetControlRect(GUILayout.Width(200)), _searchText);
 		}
 	}
 }
