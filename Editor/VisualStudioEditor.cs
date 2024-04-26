@@ -172,38 +172,51 @@ namespace Microsoft.Unity.VisualStudio.Editor
 		private void SettingsButton(ProjectGenerationFlag preference, string guiMessage, string toolTip, IVisualStudioInstallation installation)
 		{
 			var generator = installation.ProjectGenerator;
-			var prevValue = generator.AssemblyNameProvider.ProjectGenerationFlag.HasFlag(preference);
+			var isEnabled = generator.AssemblyNameProvider.ProjectGenerationFlag.HasFlag(preference);
 
-			var packageCount = _packageAssemblyHierarchyByGenerationFlag.TryGetValue(preference, out var packages) ? packages?.Count ?? 0 : 0;
+			if (_packageAssemblyHierarchyByGenerationFlag.TryGetValue(preference, out var packages) == false)
+				return;
+
+			if (packages.Count == 0)
+				return;
+
+			var includedPackages = (isEnabled == false || packages == null) ?
+				Enumerable.Empty<PackageWrapper>() :
+				packages
+					.Where(p => installation.ProjectGenerator.ExcludedPackages.Contains(p.Id) == false)
+					.ToList();
+
 			var assemblyCount = packages?.Sum(p => p.Assemblies.Count) ?? 0;
-			var includedAssemblyCount = assemblyCount - packages?.Sum(p =>
-				installation.ProjectGenerator.ExcludedPackages.Contains(p.Id) ?
-					p.Assemblies.Count :
-					p.Assemblies.Count(a => installation.ProjectGenerator.ExcludedAssemblies.Contains(a.Id))) ?? 0;
+			var includedAssemblyCount = isEnabled == false ?
+				0 :
+				includedPackages
+					.Sum(p => p.Assemblies.Count(a => installation.ProjectGenerator.ExcludedAssemblies.Contains(a.Id) == false));
 
-			EditorGUILayout.BeginHorizontal();
+			if (_packageFiltersExpanded.TryGetValue(preference, out var showAdvancedFilters) == false)
+				showAdvancedFilters = false;
 
-			var newValue = DrawToggle(new GUIContent(guiMessage, toolTip), prevValue, showMixedValue: assemblyCount > includedAssemblyCount, GUILayout.ExpandWidth(false));
-			if (newValue != prevValue)
+			var result = DrawFoldoutToggle(new FoldoutToggleOptions
+			{
+				label = new GUIContent(guiMessage, toolTip),
+				isEnabled = isEnabled,
+				drawFoldout = true,
+				isExpanded = showAdvancedFilters,
+				showMixedValue = assemblyCount > includedAssemblyCount,
+				drawLabelAsDisabled = includedAssemblyCount == 0
+			});
+
+			DrawAssemblyCountInfo(assemblyCount, includedAssemblyCount);
+
+			if (result.isEnabled != isEnabled)
 				generator.AssemblyNameProvider.ToggleProjectGeneration(preference);
 
-			bool isFoldoutExpanded = false;
-			if (newValue)
-			{
-				isFoldoutExpanded = DrawAdvancedFiltersFoldout(preference, newValue, installation, packages, assemblyCount, includedAssemblyCount);
-			}
-			else
-			{
-				// draw space to avoid jumping toggles
-				EditorGUILayout.Space();
-			}
-			EditorGUILayout.EndHorizontal();
+			_packageFiltersExpanded[preference] = result.isExpanded;
 
-			if (isFoldoutExpanded == false)
+			if (result.isExpanded == false)
 				return;
 
 			EditorGUI.indentLevel++;
-			DrawAdvancedFilters(preference, installation);
+			DrawPackageFilters(preference, installation, result.isEnabled);
 			EditorGUI.indentLevel--;
 		}
 
