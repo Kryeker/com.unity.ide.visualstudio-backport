@@ -302,16 +302,19 @@ namespace Microsoft.Unity.VisualStudio.Editor
 
 			var drawLabelAsDisabled = ftOptions.drawLabelAsDisabled || ftOptions.isEnabled == false;
 
+			Rect labelRect;
 			if (ftOptions.drawFoldout)
 			{
 				ftOptions.isExpanded = EditorGUILayout.Foldout(ftOptions.isExpanded, GUIContent.none, toggleOnLabelClick: false);
+				labelRect = GUILayoutUtility.GetLastRect();
+				labelRect.xMin += _indentWidth;
 			}
 			else
 			{
 				// Replacement for if we're not drawing a foldout (but we still need the space reserved)
-				EditorGUILayout.GetControlRect();
+				labelRect = EditorGUILayout.GetControlRect();
+				labelRect.xMin += _indentWidth * 0.5f;
 			}
-			var labelRect = GUILayoutUtility.GetLastRect();
 
 			if (drawLabelAsDisabled)
 					GUI.color = disabledColor;
@@ -319,7 +322,6 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			GUIStyle labelStyle = EditorStyles.label;
 			labelStyle.wordWrap = false;
 			var labelSize = labelStyle.CalcSize(ftOptions.label);
-			labelRect.xMin += _indentWidth;
 			labelRect.xMax = labelRect.xMin + labelSize.x + EditorGUI.indentLevel * _indentWidth;
 			EditorGUI.LabelField(labelRect, ftOptions.label, labelStyle);
 
