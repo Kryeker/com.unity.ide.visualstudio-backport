@@ -6,8 +6,6 @@ using UnityEditor;
 using UnityEditor.PackageManager;
 using UnityEngine;
 using Unity.CodeEditor;
-using UnityEditor.Experimental.GraphView;
-using System.CodeDom;
 
 // Advanced filters "addons"
 namespace Microsoft.Unity.VisualStudio.Editor
@@ -151,8 +149,8 @@ namespace Microsoft.Unity.VisualStudio.Editor
 				var assemblyCount = package.Assemblies.Count;
 				var includedAssemblyCount = package.Assemblies.Count(a => installation.ProjectGenerator.ExcludedAssemblies.Contains(a.Id) == false);
 
-				if (_packageFilter.TryGetValue(package.Id, out var wasEnabled) == false)
-					_packageFilter.Add(package.Id, wasEnabled = true);
+				if (_packageFilter.TryGetValue(package.Id, out var isEnabled) == false)
+					_packageFilter.Add(package.Id, isEnabled = true);
 
 				if (_assemblyFiltersExpanded.TryGetValue(package.Id, out var showAssemblies) == false)
 					showAssemblies = false;
@@ -161,14 +159,14 @@ namespace Microsoft.Unity.VisualStudio.Editor
 				var result = DrawFoldoutToggle(new FoldoutToggleOptions
 				{
 					label = new GUIContent(package.DisplayName),
-					isEnabled = wasEnabled,
+					isEnabled = isEnabled,
 					drawFoldout = assemblyCount > 0,
 					isExpanded = showAssemblies,
 					showMixedValue = assemblyCount > includedAssemblyCount,
 					drawLabelAsDisabled = isParentEnabled == false || includedAssemblyCount == 0
 				});
 
-				if (result.isEnabled != wasEnabled)
+				if (result.isEnabled != isEnabled)
 				{
 					_packageFilter[package.Id] = result.isEnabled;
 					isDirty = true;
