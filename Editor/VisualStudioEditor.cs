@@ -182,16 +182,14 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			if (packages.Count == 0)
 				return;
 
-			var includedPackages = (isEnabled == false || packages == null) ?
+			var includedPackages = (packages == null) ?
 				Enumerable.Empty<PackageWrapper>() :
 				packages
 					.Where(p => installation.ProjectGenerator.ExcludedPackages.Contains(p.Id) == false)
 					.ToList();
 
 			var assemblyCount = packages?.Sum(p => p.Assemblies.Count) ?? 0;
-			var includedAssemblyCount = isEnabled == false ?
-				0 :
-				includedPackages
+			var includedAssemblyCount = includedPackages
 					.Sum(p => p.Assemblies.Count(a => installation.ProjectGenerator.ExcludedAssemblies.Contains(a.Id) == false));
 
 			if (_packageFiltersExpanded.TryGetValue(preference, out var showAdvancedFilters) == false)
@@ -237,6 +235,17 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			EditorGUI.indentLevel++;
 			DrawPackageFilters(preference, installation, result.isEnabled);
 			EditorGUI.indentLevel--;
+
+			var includedPackagesAfter = (packages == null) ?
+				Enumerable.Empty<PackageWrapper>() :
+				packages
+					.Where(p => installation.ProjectGenerator.ExcludedPackages.Contains(p.Id) == false)
+					.ToList();
+
+			if(includedPackagesAfter.Count() > includedPackages.Count() && result.isEnabled == false)
+			{
+				generator.AssemblyNameProvider.ToggleProjectGeneration(preference);
+			}
 		}
 
 		public void SyncIfNeeded(string[] addedFiles, string[] deletedFiles, string[] movedFiles, string[] movedFromFiles, string[] importedFiles)

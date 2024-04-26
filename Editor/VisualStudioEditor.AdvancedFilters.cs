@@ -189,10 +189,18 @@ namespace Microsoft.Unity.VisualStudio.Editor
 				if (result.isExpanded)
 				{
 					EditorGUI.indentLevel++;
-					isDirty = DrawAssemblyFilters(package, result.isEnabled && result.drawLabelAsDisabled == false) || isDirty;
+					DrawAssemblyFilters(installation, package, result.isEnabled && result.drawLabelAsDisabled == false);
 					EditorGUI.indentLevel--;
 				}
-			}
+
+				var includedAssemblyCountAfter = package.Assemblies.Count(a => installation.ProjectGenerator.ExcludedAssemblies.Contains(a.Id) == false);
+
+					if(includedAssemblyCountAfter > includedAssemblyCount)
+					{
+						_packageFilter[package.Id] = true;
+						isDirty = true;
+					}
+				}
 
 			if (isDirty)
 			{
@@ -233,13 +241,8 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			if (result.isExpanded)
 			{
 				EditorGUI.indentLevel++;
-				var isDirty = DrawAssemblyFilters(assetsPackage, isParentEnabled: true);
+				DrawAssemblyFilters(installation, assetsPackage, isParentEnabled: true);
 				EditorGUI.indentLevel--;
-
-				if (isDirty)
-				{
-					WriteBackFilters(installation);
-				}
 			}
 		}
 
@@ -253,10 +256,10 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			EditorGUI.EndDisabledGroup();
 		}
 
-		private bool DrawAssemblyFilters(PackageWrapper package, bool isParentEnabled)
+		private void DrawAssemblyFilters(IVisualStudioInstallation installation, PackageWrapper package, bool isParentEnabled)
 		{
 			if (package.Assemblies == null)
-				return false;
+				return;
 
 			var isDirty = false;
 			foreach (var assembly in package.Assemblies)
@@ -279,7 +282,11 @@ namespace Microsoft.Unity.VisualStudio.Editor
 					isDirty = true;
 				}
 			}
-			return isDirty;
+
+			if (isDirty)
+			{
+				WriteBackFilters(installation);
+			}
 		}
 
 		private struct FoldoutToggleOptions
