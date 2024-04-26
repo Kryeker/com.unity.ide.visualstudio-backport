@@ -135,7 +135,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			EditorGUILayout.LabelField("Generate .csproj files for:");
 			DrawSearchBox();
 
-			_scrollPos = EditorGUILayout.BeginScrollView(_scrollPos);
+			_scrollPos = EditorGUILayout.BeginScrollView(_scrollPos, GUILayout.ExpandHeight(false));
 
 			EditorGUI.indentLevel++;
 
