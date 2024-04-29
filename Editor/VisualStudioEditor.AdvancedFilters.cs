@@ -417,7 +417,10 @@ namespace Microsoft.Unity.VisualStudio.Editor
 
 		private void DrawSearchBox()
 		{
-			_searchField ??= new SearchField();
+			if(_searchField == null)
+			{
+				_searchField = new SearchField();
+			}
 			EditorGUILayout.BeginHorizontal();
 			_searchText = _searchField.OnGUI(EditorGUILayout.GetControlRect(GUILayout.Width(200)), _searchText);
 			if (_isSearching)
