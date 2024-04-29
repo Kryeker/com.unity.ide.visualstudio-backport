@@ -319,7 +319,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
 
 			var rowRect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight, EditorStyles.foldout);
 
-			if (ftOptions.disableSearch == false && _isSearching && ftOptions.label.text.Contains(_searchText.Trim(), StringComparison.InvariantCultureIgnoreCase))
+			if (ftOptions.disableSearch == false && _isSearching && ftOptions.label.text.IndexOf(_searchText.Trim(), StringComparison.InvariantCultureIgnoreCase) >= 0)
 			{
 				EditorGUI.DrawRect(rowRect, new Color(0.17f, 0.36f, 0.53f, 1f));
 
