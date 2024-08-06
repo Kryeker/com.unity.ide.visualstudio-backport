@@ -49,7 +49,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			_packageFilter = CreateFilterDictionary(installation.ProjectGenerator.ExcludedPackages);
 			_assemblyFilter = CreateFilterDictionary(installation.ProjectGenerator.ExcludedAssemblies);
 
-			var eligiblePackages = UnityEditor.PackageManager.PackageInfo.GetAllRegisteredPackages()
+			var eligiblePackages = UnityHelper.GetAllPackages()
 				.Select(p => new PackageWrapper
 				{
 					Id = p.name,
