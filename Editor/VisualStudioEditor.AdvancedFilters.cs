@@ -6,6 +6,7 @@ using UnityEditor;
 using UnityEditor.PackageManager;
 using UnityEngine;
 using Unity.CodeEditor;
+using UnityEditor.IMGUI.Controls;
 
 // Advanced filters "addons"
 namespace Microsoft.Unity.VisualStudio.Editor
@@ -149,8 +150,8 @@ namespace Microsoft.Unity.VisualStudio.Editor
 				var assemblyCount = package.Assemblies.Count;
 				var includedAssemblyCount = package.Assemblies.Count(a => installation.ProjectGenerator.ExcludedAssemblies.Contains(a.Id) == false);
 
-				if (_packageFilter.TryGetValue(package.Id, out var wasEnabled) == false)
-					_packageFilter.Add(package.Id, wasEnabled = true);
+				if (_packageFilter.TryGetValue(package.Id, out var isEnabled) == false)
+					_packageFilter.Add(package.Id, isEnabled = true);
 
 				if (_assemblyFiltersExpanded.TryGetValue(package.Id, out var showAssemblies) == false)
 					showAssemblies = false;
@@ -159,27 +160,45 @@ namespace Microsoft.Unity.VisualStudio.Editor
 				var result = DrawFoldoutToggle(new FoldoutToggleOptions
 				{
 					label = new GUIContent(package.DisplayName),
-					isEnabled = wasEnabled,
+					isEnabled = isEnabled,
 					drawFoldout = assemblyCount > 0,
-					isExpanded = showAssemblies,
+					isExpanded = showAssemblies || _isSearching,
 					showMixedValue = assemblyCount > includedAssemblyCount,
 					drawLabelAsDisabled = isParentEnabled == false || includedAssemblyCount == 0
 				});
 
-				if (result.isEnabled != wasEnabled)
+				if (result.isEnabled != isEnabled)
 				{
 					_packageFilter[package.Id] = result.isEnabled;
+
+					foreach(var assembly in package.Assemblies)
+					{
+						_assemblyFilter[assembly.Id] = result.isEnabled;
+					}
+
 					isDirty = true;
 				}
-				_assemblyFiltersExpanded[package.Id] = result.isExpanded;
+
+				if (_isSearching == false)
+				{
+					_assemblyFiltersExpanded[package.Id] = result.isExpanded;
+				}
 
 				EditorGUILayout.EndHorizontal();
 
 				if (result.isExpanded)
 				{
 					EditorGUI.indentLevel++;
-					isDirty = DrawAssemblyFilters(package, result.isEnabled && result.drawLabelAsDisabled == false) || isDirty;
+					DrawAssemblyFilters(installation, package, result.isEnabled && result.drawLabelAsDisabled == false);
 					EditorGUI.indentLevel--;
+				}
+
+				var includedAssemblyCountAfter = package.Assemblies.Count(a => installation.ProjectGenerator.ExcludedAssemblies.Contains(a.Id) == false);
+
+				if(includedAssemblyCountAfter > includedAssemblyCount)
+				{
+					_packageFilter[package.Id] = true;
+					isDirty = true;
 				}
 			}
 
@@ -205,7 +224,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			{
 				isEnabled = true,
 				drawFoldout = true,
-				isExpanded = isFoldoutExpanded,
+				isExpanded = isFoldoutExpanded || _isSearching,
 				label = new GUIContent("Assemblies from Assets"),
 				drawLabelAsDisabled = includedAssemblyCount == 0,
 				disableToggle = true,
@@ -214,18 +233,16 @@ namespace Microsoft.Unity.VisualStudio.Editor
 
 			DrawAssemblyCountInfo(assemblyCount, includedAssemblyCount);
 
-			_packageFiltersExpanded[ProjectGenerationFlag.None] = result.isExpanded;
+			if (_isSearching == false)
+			{
+				_packageFiltersExpanded[ProjectGenerationFlag.None] = result.isExpanded;
+			}
 
 			if (result.isExpanded)
 			{
 				EditorGUI.indentLevel++;
-				var isDirty = DrawAssemblyFilters(assetsPackage, isParentEnabled: true);
+				DrawAssemblyFilters(installation, assetsPackage, isParentEnabled: true);
 				EditorGUI.indentLevel--;
-
-				if (isDirty)
-				{
-					WriteBackFilters(installation);
-				}
 			}
 		}
 
@@ -233,16 +250,16 @@ namespace Microsoft.Unity.VisualStudio.Editor
 		{
 			var rect = GUILayoutUtility.GetLastRect();
 			var guiContent = new GUIContent($"{FormatAssemblyCount(includedAssemblyCount, assemblyCount)}");
-			rect.xMin += 310;
+			rect.xMin += _togglePosition;
 			EditorGUI.BeginDisabledGroup(includedAssemblyCount == 0);
 			EditorGUI.LabelField(rect, guiContent, EditorStyles.miniLabel);
 			EditorGUI.EndDisabledGroup();
 		}
 
-		private bool DrawAssemblyFilters(PackageWrapper package, bool isParentEnabled)
+		private void DrawAssemblyFilters(IVisualStudioInstallation installation, PackageWrapper package, bool isParentEnabled)
 		{
 			if (package.Assemblies == null)
-				return false;
+				return;
 
 			var isDirty = false;
 			foreach (var assembly in package.Assemblies)
@@ -265,7 +282,11 @@ namespace Microsoft.Unity.VisualStudio.Editor
 					isDirty = true;
 				}
 			}
-			return isDirty;
+
+			if (isDirty)
+			{
+				WriteBackFilters(installation);
+			}
 		}
 
 		private struct FoldoutToggleOptions
@@ -276,8 +297,15 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			public bool isExpanded;
 			public bool showMixedValue;
 			public bool drawLabelAsDisabled;
-			internal bool disableToggle;
+			public bool disableToggle;
+			internal bool disableSearch;
 		}
+
+		// Static value to align all toggles
+		private static float _togglePosition = 250;
+
+		private const float _toggleSpacing = 10;
+		private const float _indentWidth = 15;
 
 		private static FoldoutToggleOptions DrawFoldoutToggle(FoldoutToggleOptions ftOptions, params GUILayoutOption[] options)
 		{
@@ -287,32 +315,44 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			var disabledColor = previousColor;
 			disabledColor.a *= 0.5f;
 
+			GUIStyle labelStyle = new GUIStyle(EditorStyles.label);
+
+			var rowRect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight, EditorStyles.foldout);
+
+			if (ftOptions.disableSearch == false && _isSearching && ftOptions.label.text.IndexOf(_searchText.Trim(), StringComparison.InvariantCultureIgnoreCase) >= 0)
+			{
+				EditorGUI.DrawRect(rowRect, new Color(0.17f, 0.36f, 0.53f, 1f));
+
+				labelStyle.normal.textColor = Color.white;
+			}
+
 			var drawLabelAsDisabled = ftOptions.drawLabelAsDisabled || ftOptions.isEnabled == false;
 
-			Rect labelRect = new Rect();
+			Rect labelRect = rowRect;
 			if (ftOptions.drawFoldout)
 			{
-				ftOptions.isExpanded = EditorGUILayout.Foldout(ftOptions.isExpanded, GUIContent.none, toggleOnLabelClick: false);
-				labelRect = GUILayoutUtility.GetLastRect();
-				labelRect.xMin += 12;
-
-				if(drawLabelAsDisabled)
-					GUI.color = disabledColor;
-
-				EditorGUI.LabelField(labelRect, ftOptions.label);
+				ftOptions.isExpanded = EditorGUI.Foldout(rowRect, ftOptions.isExpanded, GUIContent.none, toggleOnLabelClick: false);
+				labelRect.xMin += _indentWidth;
 			}
 			else
 			{
-				if (drawLabelAsDisabled)
-					GUI.color = disabledColor;
-
-				EditorGUILayout.LabelField(ftOptions.label);
+				labelRect.xMin += _indentWidth * 0.5f;
 			}
+
+			if (drawLabelAsDisabled)
+				GUI.color = disabledColor;
+
+			labelStyle.wordWrap = false;
+			var labelSize = labelStyle.CalcSize(ftOptions.label);
+			labelRect.xMax = labelRect.xMin + labelSize.x + EditorGUI.indentLevel * _indentWidth;
+
+			EditorGUI.LabelField(labelRect, ftOptions.label, labelStyle);
+
 			GUI.color = previousColor;
 
-			var foldoutRect = GUILayoutUtility.GetLastRect();
+			var foldoutRect = rowRect;
 			var toggleRect = foldoutRect;
-			toggleRect.xMin = 300;
+			toggleRect.xMin = _togglePosition = Mathf.Max(_togglePosition, labelRect.xMax + _toggleSpacing);
 			var savedIndentLevel = EditorGUI.indentLevel;
 			EditorGUI.indentLevel = 0;
 
@@ -336,14 +376,8 @@ namespace Microsoft.Unity.VisualStudio.Editor
 					ftOptions.isExpanded = !ftOptions.isExpanded;
 				}
 			}
-
 			EditorGUI.indentLevel = savedIndentLevel;
 
-			//EditorGUILayout.Toggle(GUIContent.none, isEnabled, options);
-			//EditorGUILayout.BeginHorizontal();
-			//EditorGUILayout.LabelField(label, GUILayout.Width(260 - EditorGUI.indentLevel * 15));
-			//EditorGUILayout.Toggle(wasEnabled, GUILayout.Width(32), GUILayout.ExpandWidth(true));
-			//EditorGUILayout.EndHorizontal();
 			EditorGUILayout.EndHorizontal();
 
 			if (foldoutRect.Contains(Event.current.mousePosition))
@@ -370,8 +404,30 @@ namespace Microsoft.Unity.VisualStudio.Editor
 				_assemblyFilter = new Dictionary<string, bool>();
 				_packageFiltersExpanded = new Dictionary<ProjectGenerationFlag, bool>();
 				WriteBackFilters(installation);
+				InitializeAdvancedFiltersCache(installation);
 			}
 			EditorGUI.EndDisabledGroup();
+		}
+
+		private static string _searchText = "";
+		private SearchField _searchField;
+		private Vector2 _scrollPos;
+
+		private static bool _isSearching => string.IsNullOrWhiteSpace(_searchText) == false;
+
+		private void DrawSearchBox()
+		{
+			if(_searchField == null)
+			{
+				_searchField = new SearchField();
+			}
+			EditorGUILayout.BeginHorizontal();
+			_searchText = _searchField.OnGUI(EditorGUILayout.GetControlRect(GUILayout.Width(200)), _searchText);
+			if (_isSearching)
+			{
+				EditorGUILayout.LabelField("Note: All entries are auto-expanded during search. Clear search to return to normal operation.", EditorStyles.miniLabel);
+			}
+			EditorGUILayout.EndHorizontal();
 		}
 	}
 }

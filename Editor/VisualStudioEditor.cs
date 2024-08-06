@@ -133,6 +133,10 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			GUILayout.EndHorizontal();
 
 			EditorGUILayout.LabelField("Generate .csproj files for:");
+			DrawSearchBox();
+
+			_scrollPos = EditorGUILayout.BeginScrollView(_scrollPos, GUILayout.ExpandHeight(false));
+
 			EditorGUI.indentLevel++;
 
 			EnsureAdvancedFiltersCache(installation);
@@ -151,6 +155,8 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			EditorGUILayout.Space();
 			DrawAssetAssemblies(installation);
 			EditorGUILayout.Space();
+
+			EditorGUILayout.EndScrollView();
 
 			EditorGUILayout.BeginHorizontal();
 			RegenerateProjectFiles(installation);
@@ -182,16 +188,14 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			if (packages.Count == 0)
 				return;
 
-			var includedPackages = (isEnabled == false || packages == null) ?
+			var includedPackages = (packages == null) ?
 				Enumerable.Empty<PackageWrapper>() :
 				packages
 					.Where(p => installation.ProjectGenerator.ExcludedPackages.Contains(p.Id) == false)
 					.ToList();
 
 			var assemblyCount = packages?.Sum(p => p.Assemblies.Count) ?? 0;
-			var includedAssemblyCount = isEnabled == false ?
-				0 :
-				includedPackages
+			var includedAssemblyCount = includedPackages
 					.Sum(p => p.Assemblies.Count(a => installation.ProjectGenerator.ExcludedAssemblies.Contains(a.Id) == false));
 
 			if (_packageFiltersExpanded.TryGetValue(preference, out var showAdvancedFilters) == false)
@@ -202,17 +206,34 @@ namespace Microsoft.Unity.VisualStudio.Editor
 				label = new GUIContent(guiMessage, toolTip),
 				isEnabled = isEnabled,
 				drawFoldout = true,
-				isExpanded = showAdvancedFilters,
+				isExpanded = showAdvancedFilters || _isSearching,
 				showMixedValue = assemblyCount > includedAssemblyCount,
-				drawLabelAsDisabled = includedAssemblyCount == 0
+				drawLabelAsDisabled = includedAssemblyCount == 0,
+				disableSearch = true
 			});
 
 			DrawAssemblyCountInfo(assemblyCount, includedAssemblyCount);
 
 			if (result.isEnabled != isEnabled)
+			{
 				generator.AssemblyNameProvider.ToggleProjectGeneration(preference);
+				foreach (var package in packages)
+				{
+					_packageFilter[package.Id] = result.isEnabled;
 
-			_packageFiltersExpanded[preference] = result.isExpanded;
+					foreach(var assembly in package.Assemblies)
+					{
+						_assemblyFilter[assembly.Id] = result.isEnabled;
+					}
+				}
+
+				WriteBackFilters(installation);
+			}
+
+			if (_isSearching == false)
+			{
+				_packageFiltersExpanded[preference] = result.isExpanded;
+			}
 
 			if (result.isExpanded == false)
 				return;
@@ -220,6 +241,17 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			EditorGUI.indentLevel++;
 			DrawPackageFilters(preference, installation, result.isEnabled);
 			EditorGUI.indentLevel--;
+
+			var includedPackagesAfter = (packages == null) ?
+				Enumerable.Empty<PackageWrapper>() :
+				packages
+					.Where(p => installation.ProjectGenerator.ExcludedPackages.Contains(p.Id) == false)
+					.ToList();
+
+			if(includedPackagesAfter.Count() > includedPackages.Count() && result.isEnabled == false)
+			{
+				generator.AssemblyNameProvider.ToggleProjectGeneration(preference);
+			}
 		}
 
 		public void SyncIfNeeded(string[] addedFiles, string[] deletedFiles, string[] movedFiles, string[] movedFromFiles, string[] importedFiles)
