@@ -47,24 +47,8 @@ namespace Microsoft.Unity.VisualStudio.Editor
 		}
 
 		public IEnumerable<PackageInfo> PackagesFilteredByProjectGenerationFlags =>
-			GetAllPackages()
+			UnityHelper.GetAllPackages()
 			.Where(p => m_AssemblyNameProvider.IsInternalizedPackage(p) == false);
-
-#if UNITY_2021_1_OR_NEWER
-		private static IEnumerable<PackageInfo> GetAllPackages() => PackageInfo.GetAllRegisteredPackages();
-#else
-		private static Func<PackageInfo[]> _getAllPackages;
-		private static IEnumerable<PackageInfo> GetAllPackages()
-		{
-			if (_getAllPackages == null)
-			{
-				var m = typeof(PackageInfo).GetMethod("GetAll", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.FlattenHierarchy);
-				_getAllPackages = (Func<PackageInfo[]>)Delegate.CreateDelegate(typeof(Func<PackageInfo[]>), m);
-			}
-
-			return _getAllPackages();
-		}
-#endif
 
 		private static List<string> GetEditorPrefsStringList(string key)
 		{
@@ -93,7 +77,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
 				var containingAssemblyPath = CompilationPipeline.GetAssemblyDefinitionFilePathFromScriptPath(file);
 				if (containingAssemblyPath != null)
 				{
-					// ... or if they belong to a excluded .asmdef
+					// ... or if they belong to an excluded .asmdef
 					var containingAssemblyFilename = Path.GetFileName(containingAssemblyPath);
 					if (m_ExcludedAssemblies.Contains(containingAssemblyFilename))
 						return false;

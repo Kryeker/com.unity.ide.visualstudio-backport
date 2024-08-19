@@ -133,6 +133,10 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			GUILayout.EndHorizontal();
 
 			EditorGUILayout.LabelField("Generate .csproj files for:");
+			DrawSearchBox();
+
+			_scrollPos = EditorGUILayout.BeginScrollView(_scrollPos, GUILayout.ExpandHeight(false));
+
 			EditorGUI.indentLevel++;
 
 			EnsureAdvancedFiltersCache(installation);
@@ -151,6 +155,8 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			EditorGUILayout.Space();
 			DrawAssetAssemblies(installation);
 			EditorGUILayout.Space();
+
+			EditorGUILayout.EndScrollView();
 
 			EditorGUILayout.BeginHorizontal();
 			RegenerateProjectFiles(installation);
@@ -174,39 +180,78 @@ namespace Microsoft.Unity.VisualStudio.Editor
 		private void SettingsButton(ProjectGenerationFlag preference, string guiMessage, string toolTip, IVisualStudioInstallation installation)
 		{
 			var generator = installation.ProjectGenerator;
-			var prevValue = generator.AssemblyNameProvider.ProjectGenerationFlag.HasFlag(preference);
+			var isEnabled = generator.AssemblyNameProvider.ProjectGenerationFlag.HasFlag(preference);
 
-			var packageCount = _packageAssemblyHierarchyByGenerationFlag.TryGetValue(preference, out var packages) ? packages?.Count ?? 0 : 0;
+			if (_packageAssemblyHierarchyByGenerationFlag.TryGetValue(preference, out var packages) == false)
+				return;
+
+			if (packages.Count == 0)
+				return;
+
+			var includedPackages = (packages == null) ?
+				Enumerable.Empty<PackageWrapper>() :
+				packages
+					.Where(p => installation.ProjectGenerator.ExcludedPackages.Contains(p.Id) == false)
+					.ToList();
+
 			var assemblyCount = packages?.Sum(p => p.Assemblies.Count) ?? 0;
-			var includedAssemblyCount = assemblyCount - packages?.Sum(p =>
-				installation.ProjectGenerator.ExcludedPackages.Contains(p.Id) ?
-					p.Assemblies.Count :
-					p.Assemblies.Count(a => installation.ProjectGenerator.ExcludedAssemblies.Contains(a.Id))) ?? 0;
+			var includedAssemblyCount = includedPackages
+					.Sum(p => p.Assemblies.Count(a => installation.ProjectGenerator.ExcludedAssemblies.Contains(a.Id) == false));
 
-			EditorGUILayout.BeginHorizontal();
+			if (_packageFiltersExpanded.TryGetValue(preference, out var showAdvancedFilters) == false)
+				showAdvancedFilters = false;
 
-			var newValue = DrawToggle(new GUIContent(guiMessage, toolTip), prevValue, showMixedValue: assemblyCount > includedAssemblyCount, GUILayout.ExpandWidth(false));
-			if (newValue != prevValue)
+			var result = DrawFoldoutToggle(new FoldoutToggleOptions
+			{
+				label = new GUIContent(guiMessage, toolTip),
+				isEnabled = isEnabled,
+				drawFoldout = true,
+				isExpanded = showAdvancedFilters || _isSearching,
+				showMixedValue = assemblyCount > includedAssemblyCount,
+				drawLabelAsDisabled = includedAssemblyCount == 0,
+				disableSearch = true
+			});
+
+			DrawAssemblyCountInfo(assemblyCount, includedAssemblyCount);
+
+			if (result.isEnabled != isEnabled)
+			{
 				generator.AssemblyNameProvider.ToggleProjectGeneration(preference);
+				foreach (var package in packages)
+				{
+					_packageFilter[package.Id] = result.isEnabled;
 
-			bool isFoldoutExpanded = false;
-			if (newValue)
-			{
-				isFoldoutExpanded = DrawAdvancedFiltersFoldout(preference, newValue, installation, packages, assemblyCount, includedAssemblyCount);
-			}
-			else
-			{
-				// draw space to avoid jumping toggles
-				EditorGUILayout.Space();
-			}
-			EditorGUILayout.EndHorizontal();
+					foreach(var assembly in package.Assemblies)
+					{
+						_assemblyFilter[assembly.Id] = result.isEnabled;
+					}
+				}
 
-			if (isFoldoutExpanded == false)
+				WriteBackFilters(installation);
+			}
+
+			if (_isSearching == false)
+			{
+				_packageFiltersExpanded[preference] = result.isExpanded;
+			}
+
+			if (result.isExpanded == false)
 				return;
 
 			EditorGUI.indentLevel++;
-			DrawAdvancedFilters(preference, installation);
+			DrawPackageFilters(preference, installation, result.isEnabled);
 			EditorGUI.indentLevel--;
+
+			var includedPackagesAfter = (packages == null) ?
+				Enumerable.Empty<PackageWrapper>() :
+				packages
+					.Where(p => installation.ProjectGenerator.ExcludedPackages.Contains(p.Id) == false)
+					.ToList();
+
+			if(includedPackagesAfter.Count() > includedPackages.Count() && result.isEnabled == false)
+			{
+				generator.AssemblyNameProvider.ToggleProjectGeneration(preference);
+			}
 		}
 
 		public void SyncIfNeeded(string[] addedFiles, string[] deletedFiles, string[] movedFiles, string[] movedFromFiles, string[] importedFiles)
